@@ -1,15 +1,11 @@
+//This is an indicator that is used for growth, momentum and value investment research, this tracks and showcases the TTM financials for every candlestick, and how much FCFF Yield % would this equate to.
+
 //@version=5
-indicator("TTM FCF Yield %", precision = 2, format = format.percent)
+indicator("TTM FCFF Yield %", precision = 2, format = format.percent)
 
 //Define time-series
 var frequency = "FQ"
-ticker =  "NASDAQ:AAPL"
-int timeframeInSeconds = timeframe.in_seconds()
-int totalSecondsIn12Months = 365 * 24 * 60 * 60
-var frequencyUnit = if frequency == "FY" 
-    math.round(totalSecondsIn12Months / timeframeInSeconds)
-else 
-    math.round(totalSecondsIn12Months / timeframeInSeconds / 4)
+ticker =  syminfo.tickerid
 
 //Call financial data (I don't call Enterprise Valuation because it doesn't adjust daily for stock moves)
 cashfOps = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM")
@@ -17,55 +13,20 @@ totalShares = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequency)
 netDebt = request.financial(ticker, "NET_DEBT", frequency)
 cashEquivalents = request.financial(ticker, "CASH_N_EQUIVALENTS", frequency)
 depreciationAmor = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM")
-capitalExpend = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", "FQ")
+capitalExpend = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequency)
+changeNWC = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequency)
 //This will calculate the Market Capitalization for every candle
 marketCap =  totalShares * close
 
-dilutionRatio = request.financial(ticker, 'TOTAL_SHARES_OUTSTANDING', frequency) / request.financial(ticker, 'DILUTED_SHARES_OUTSTANDING', frequency)
-
 //Calculating the Enterprise Value = Market Capitalization + Net Debt (which is Total Debt - Cash and Cash Equivalents)
-enterpriseValue = marketCap - netDebt
+enterpriseValue = marketCap + netDebt
 
-//Calculating the FCFF
-fcff = cashfOps + depreciationAmor - capitalExpend
+//Calculating the FCFF = Cash from Operating Activities - CapEx (for fixed assets) - Change in NWC + Depreciation & Amortization (from Income Statement)
+fcff = cashfOps + depreciationAmor - capitalExpend - changeNWC
 
-//Calculate FCFF Yield = Cash from Operating Activities - CapEx (for fixed assets) - Change in NWC + Depreciation & Amortization (from Income Statement)
+//Calculate FCFF Yield = FCFF / Enterprise Value. With Enterprise Value = Market Capitalization + Net Debt
 
-fcfYield = fcff / enterpriseValue * 100
-fcfYieldDiluted = if dilutionRatio <= 1 
-    fcfYield * dilutionRatio
-else 
-    fcfYield
+fcffYield = fcff / enterpriseValue * 100
 
-
-plot(fcfYield, "FCF Yield Net", color =  color.new(color.lime, 20), style =  plot.style_line, linewidth = 2  )
-plot(fcfYieldDiluted, "FCF Yield Diluted", color =  color.new(color.green, 60), style =  plot.style_area, linewidth = 3  )
-
-if fcfYieldDiluted > 0
-    label.new(bar_index, fcfYieldDiluted, str.tostring(fcfYieldDiluted, format.percent), style = label.style_none, textcolor = #ffffff00)
-
-var lastYear = float(na)
-var lastBar = int(na)
-var last10Years = array.new<float>(10, na)
-if not na(fcfYieldDiluted)
-    log.info("{0}", fcfYieldDiluted)
-    lastBar := bar_index
-    lastYear := fcfYieldDiluted
-    last10Years.push(fcfYieldDiluted)
-    if (last10Years.size() > 10)
-        last10Years.shift()
-
-
-if barstate.islast
-    
-    log.info("log {0}, {1},", lastBar, last10Years)
-    var last2YearsAvg = array.avg(last10Years.slice(last10Years.size() - 2, last10Years.size()))
-    var last5YearsAvg = array.avg(last10Years.slice(last10Years.size() - 5, last10Years.size()))
-    var last10YearsAvg = array.avg(last10Years)
-
-    
-    if not na(lastYear)
-        var labelText = "Avg FCF Yield % Diluted" +"\n1Y: " + str.tostring(lastYear, format.percent) + "\n2Y: " + str.tostring(last2YearsAvg, format.percent) + "\n5Y: " + str.tostring(last5YearsAvg, format.percent) + "\n10Y: " + str.tostring(last10YearsAvg, format.percent)
-        var xLoc = lastBar + math.round(1.2 * frequencyUnit)
-        var yLoc = math.abs(lastYear * 0.9)
-        label.new(xLoc, yLoc, labelText, style = label.style_label_left, color = #4caf4f00, textcolor = #ffffff00)
+//Plot data
+plot(fcffYield, "FCFF Yield Net", color =  color.new(color.lime, 20), style =  plot.style_area, linewidth = 2  )
