@@ -4,7 +4,12 @@
 indicator("TTM FCFF Yield %", precision = 2, format = format.percent)
 
 //Define time-series
-var frequency = "FQ"
+var frequency = input.string("FQ", 
+                       title = "Frequency",
+                       group = "Frequency Settings",
+                       inline = 'tt', 
+                       options = ["FY", "FQ", "FH"], 
+                       tooltip = "Different stock exchanges around the world reports quartly, yearly or semi-annually.")
 ticker =  syminfo.tickerid
 
 //Call financial data (I don't call Enterprise Valuation because it doesn't adjust daily for stock moves)
