@@ -10,6 +10,13 @@ var frequency = input.string("FQ",
                        inline = 'tt', 
                        options = ["FY", "FQ", "FH"], 
                        tooltip = "Different stock exchanges around the world reports quartly, yearly or semi-annually.")
+
+var frequencyY = input.string("FY", 
+                       title = "Non-TTM Frequency",
+                       group = "Frequency Settings",
+                       inline = 'tt', 
+                       options = ["FY", "FQ", "FH"], 
+                       tooltip = "Different stock exchanges around the world reports quartly, yearly or semi-annually.")
 ticker =  syminfo.tickerid
 
 //Call financial data (I don't call Enterprise Valuation because it doesn't adjust daily for stock moves)
@@ -35,3 +42,23 @@ fcffYield = fcff / enterpriseValue * 100
 
 //Plot data
 plot(fcffYield, "FCFF Yield Net", color =  color.new(color.lime, 20), style =  plot.style_area, linewidth = 2  )
+
+//This part belongs to the smoothed out graph over the period specifications in the Settings
+//Get the variables for the smoothed out graph
+cashfOpsY = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM", barmerge.gaps_on)
+totalSharesY = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequencyY, barmerge.gaps_on)
+netDebtY = request.financial(ticker, "NET_DEBT", frequencyY, barmerge.gaps_on)
+cashEquivalentsY = request.financial(ticker, "CASH_N_EQUIVALENTS", frequencyY, barmerge.gaps_on)
+depreciationAmorY = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM", barmerge.gaps_on)
+capitalExpendY = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequencyY, barmerge.gaps_on)
+changeNWCY = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequencyY, barmerge.gaps_on)
+
+//Calculate the EnterpriseValue for this indicator
+enterpriseValueY = marketCap + netDebtY
+
+//Calculate FCFF quarterly or yearly
+fcffY = cashfOpsY + depreciationAmorY - capitalExpendY - changeNWCY
+fcffYieldY = fcffY / enterpriseValueY * 100
+
+//Plot the yearly data on the chart
+plot(fcffYieldY, "FCFF Yield Net", color =  color.new(color.red, 20), style =  plot.style_line, linewidth = 2  )
