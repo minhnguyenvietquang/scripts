@@ -45,13 +45,13 @@ plot(fcffYield, "FCFF Yield Net", color =  color.new(color.lime, 20), style =  p
 
 //This part belongs to the smoothed out graph over the period specifications in the Settings
 //Get the variables for the smoothed out graph
-cashfOpsY = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM", barmerge.gaps_on)
-totalSharesY = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequencyY, barmerge.gaps_on)
-netDebtY = request.financial(ticker, "NET_DEBT", frequencyY, barmerge.gaps_on)
-cashEquivalentsY = request.financial(ticker, "CASH_N_EQUIVALENTS", frequencyY, barmerge.gaps_on)
-depreciationAmorY = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM", barmerge.gaps_on)
-capitalExpendY = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequencyY, barmerge.gaps_on)
-changeNWCY = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequencyY, barmerge.gaps_on)
+cashfOpsY = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM")
+totalSharesY = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequencyY)
+netDebtY = request.financial(ticker, "NET_DEBT", frequencyY)
+cashEquivalentsY = request.financial(ticker, "CASH_N_EQUIVALENTS", frequencyY)
+depreciationAmorY = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM")
+capitalExpendY = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequencyY)
+changeNWCY = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequencyY)
 
 //Calculate the EnterpriseValue for this indicator
 enterpriseValueY = marketCap + netDebtY
