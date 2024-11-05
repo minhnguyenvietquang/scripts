@@ -2,7 +2,7 @@
 
 //@version=5
 indicator("TTM FCFF Yield %", precision = 2, format = format.percent)
-
+ticker =  syminfo.tickerid
 //Define time-series
 var frequency = input.string("FQ", 
                        title = "Frequency",
@@ -17,7 +17,27 @@ var frequencyY = input.string("FY",
                        inline = 'tt', 
                        options = ["FY", "FQ", "FH"], 
                        tooltip = "Different stock exchanges around the world reports quartly, yearly or semi-annually.")
-ticker =  syminfo.tickerid
+//Ask what to do with positive CapEx resulting from Asset Sales
+var capexyesno = input.string("Positive CapEx or Negative CapEx, I don't care subtract it",
+                       title = "How to treat positive CapEx from Asset Sales",
+                       group = "FCFF CapEx Settings",
+                       inline = 'tt', 
+                       options = ["Positive CapEx or Negative CapEx, I don't care subtract it", "Positive CapEx is not subtracted to get FCFF"])
+//Ask what type of CapEx to use
+var capextypeask = input.string("Use Total CapEx",
+                       title = "Type of Capital Expenditure used in calculating FCFF",
+                       group = "Positive CapEx Treatment Settings",
+                       inline = 'tt', 
+                       options = ["Use Total CapEx", "Use only Fixed Assets CapEx", "Use only Other CapExes"])
+
+//Declare type of CapEx
+var string capextype = "CAPITAL_EXPENDITURES"
+if (capextypeask == "Use Total CapEx")
+    capextype := "CAPITAL_EXPENDITURES"
+if (capextypeask == "Use only Fixed Assets CapEx")
+    capextype := "CAPITAL_EXPENDITURES_FIXED_ASSETS"
+if (capextypeask == "Use only Other CapExes")
+    capextype := "CAPITAL_EXPENDITURES_OTHER_ASSETS"
 
 //Call financial data (I don't call Enterprise Valuation because it doesn't adjust daily for stock moves)
 cashfOps = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM")
@@ -25,17 +45,32 @@ totalShares = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequency)
 netDebt = request.financial(ticker, "NET_DEBT", frequency)
 cashEquivalents = request.financial(ticker, "CASH_N_EQUIVALENTS", frequency)
 depreciationAmor = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM")
-capitalExpend = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequency)
+capitalExpend = request.financial(ticker, capextype, frequency)
 changeNWC = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequency)
+
+//Get the variables for the smoothed out graph
+cashfOpsY = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM")
+totalSharesY = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequencyY)
+netDebtY = request.financial(ticker, "NET_DEBT", frequencyY)
+cashEquivalentsY = request.financial(ticker, "CASH_N_EQUIVALENTS", frequencyY)
+depreciationAmorY = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM")
+capitalExpendY = request.financial(ticker, capextype, frequencyY)
+changeNWCY = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequencyY)
+
 //This will calculate the Market Capitalization for every candle
 marketCap =  totalShares * close
 
 //Calculating the Enterprise Value = Market Capitalization + Net Debt (which is Total Debt - Cash and Cash Equivalents)
 enterpriseValue = marketCap + netDebt
 
+//Dealing with postive CapEx
+if (capexyesno ==  "Positive CapEx is not subtracted to get FCFF")
+    if (capitalExpend >= 0)
+        capitalExpend := 0
+        capitalExpendY := 0
+
 //Calculating the FCFF = Cash from Operating Activities - CapEx (for fixed assets) - Change in NWC + Depreciation & Amortization (from Income Statement)
 fcff = cashfOps + depreciationAmor - capitalExpend - changeNWC
-
 //Calculate FCFF Yield = FCFF / Enterprise Value. With Enterprise Value = Market Capitalization + Net Debt
 
 fcffYield = fcff / enterpriseValue * 100
@@ -44,15 +79,6 @@ fcffYield = fcff / enterpriseValue * 100
 plot(fcffYield, "FCFF Yield Net", color =  color.new(color.lime, 20), style =  plot.style_area, linewidth = 2  )
 
 //This part belongs to the smoothed out graph over the period specifications in the Settings
-//Get the variables for the smoothed out graph
-cashfOpsY = request.financial(ticker, "CASH_F_OPERATING_ACTIVITIES", "TTM")
-totalSharesY = request.financial(ticker, "TOTAL_SHARES_OUTSTANDING", frequencyY)
-netDebtY = request.financial(ticker, "NET_DEBT", frequencyY)
-cashEquivalentsY = request.financial(ticker, "CASH_N_EQUIVALENTS", frequencyY)
-depreciationAmorY = request.financial(ticker, "DEP_AMORT_EXP_INCOME_S", "TTM")
-capitalExpendY = request.financial(ticker, "CAPITAL_EXPENDITURES_FIXED_ASSETS", frequencyY)
-changeNWCY = request.financial(ticker, "CHANGES_IN_WORKING_CAPITAL", frequencyY)
-
 //Calculate the EnterpriseValue for this indicator
 enterpriseValueY = marketCap + netDebtY
 
@@ -62,3 +88,5 @@ fcffYieldY = fcffY / enterpriseValueY * 100
 
 //Plot the yearly data on the chart
 plot(fcffYieldY, "FCFF Yield Net", color =  color.new(color.red, 20), style =  plot.style_line, linewidth = 2  )
+
+//Script ends
